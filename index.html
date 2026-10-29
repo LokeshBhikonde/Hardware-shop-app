@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="hi" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hardware Shop Assistant</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#fff7ed', 100: '#ffedd5', 500: '#f97316', 600: '#ea580c', 700: '#c2410c' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .modal-backdrop { background-color: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans text-slate-800 antialiased selection:bg-brand-500 selection:text-white pb-20 sm:pb-0">
+
+    <!-- Header -->
+    <header class="bg-slate-900 text-white sticky top-0 z-30 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-amber-500 flex items-center justify-center text-white shadow-lg">
+                    <i class="fa-solid fa-wrench text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-bold leading-tight">Hardware Assistant</h1>
+                    <p class="text-[11px] text-slate-400">Price & Rack Finder</p>
+                </div>
+            </div>
+            <button onclick="openModal()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white px-3 py-2 rounded-xl text-sm font-semibold shadow-md transition-colors">
+                <i class="fa-solid fa-plus"></i>
+                <span class="hidden sm:inline">Add Product</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-5">
+        
+        <!-- Search & Filter -->
+        <section class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </div>
+                <input type="text" id="searchInput" oninput="filterProducts()" placeholder="Search by name, brand, or rack (e.g. PVC, Asian Paints, Rack A)..." class="w-full pl-11 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm sm:text-base outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all">
+                <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute inset-y-0 right-0 pr-4 items-center text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-circle-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Categories -->
+            <div>
+                <div class="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar" id="categoryTabs">
+                    <!-- Categories rendered via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm"><i class="fa-solid fa-box"></i></div>
+                <div>
+                    <p class="text-[10px] uppercase font-bold text-slate-400">Products</p>
+                    <p class="text-lg font-bold text-slate-800" id="statTotal">0</p>
+                </div>
+            </div>
+            <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-sm"><i class="fa-solid fa-location-dot"></i></div>
+                <div>
+                    <p class="text-[10px] uppercase font-bold text-slate-400">Racks Used</p>
+                    <p class="text-lg font-bold text-slate-800" id="statRacks">0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Grid -->
+        <section>
+            <div id="productGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                <!-- Products rendered via JS -->
+            </div>
+            
+            <div id="emptyState" class="hidden text-center py-10 bg-white rounded-2xl border border-dashed border-slate-300 p-6 mt-4">
+                <i class="fa-solid fa-box-open text-4xl text-slate-300 mb-3"></i>
+                <h3 class="text-base font-bold text-slate-800 mb-1">No Products Found</h3>
+                <p class="text-xs text-slate-500">Try adjusting your search or category filter.</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Add/Edit Modal -->
+    <div id="productModal" class="fixed inset-0 z-50 hidden modal-backdrop flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
+            <div class="bg-slate-900 text-white px-5 py-4 flex items-center justify-between shrink-0">
+                <h3 class="font-bold text-base" id="modalTitle">Add New Product</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form id="productForm" onsubmit="saveProduct(event)" class="p-5 space-y-4 overflow-y-auto flex-1 text-sm">
+                <input type="hidden" id="productId">
+                <input type="hidden" id="productImageBase64">
+
+                <!-- Image Upload -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Product Photo</label>
+                    <div id="imagePreviewContainer" class="hidden relative w-full h-32 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 mb-2">
+                        <img id="imagePreview" src="" class="w-full h-full object-contain">
+                        <button type="button" onclick="removeImage()" class="absolute top-2 right-2 bg-red-500 text-white w-7 h-7 rounded-full flex items-center justify-center shadow"><i class="fa-solid fa-trash text-xs"></i></button>
+                    </div>
+                    <label class="flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-50 border border-slate-300 border-dashed rounded-xl cursor-pointer text-slate-600 hover:bg-slate-100 transition-colors">
+                        <i class="fa-solid fa-camera"></i> <span class="font-semibold text-xs">Take Photo / Upload</span>
+                        <input type="file" id="imageInput" accept="image/*" onchange="handleImageUpload(event)" class="hidden">
+                    </label>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Product Name *</label>
+                    <input type="text" id="productName" required placeholder="e.g. 1/2 Inch PVC Pipe" class="w-full px-3 py-2 rounded-xl border border-slate-300 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Category *</label>
+                        <select id="productCategory" required class="w-full px-3 py-2 rounded-xl border border-slate-300 outline-none focus:border-brand-500 bg-white">
+                            <option value="Plumbing">Plumbing</option>
+                            <option value="Electrical">Electrical</option>
+                            <option value="Paints">Paints</option>
+                            <option value="Tools">Tools</option>
+                            <option value="Fasteners">Fasteners</option>
+                            <option value="General">General</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Brand</label>
+                        <input type="text" id="productBrand" placeholder="e.g. Supreme" class="w-full px-3 py-2 rounded-xl border border-slate-300 outline-none focus:border-brand-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Price (₹) *</label>
+                        <input type="number" id="productPrice" step="0.1" min="0" required placeholder="0.00" class="w-full px-3 py-2 rounded-xl border border-slate-300 outline-none focus:border-brand-500 font-bold text-emerald-600">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Rack Location *</label>
+                        <input type="text" id="productRack" required placeholder="e.g. Rack A-1" class="w-full px-3 py-2 rounded-xl border border-slate-300 outline-none focus:border-brand-500 bg-amber-50">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Details (Optional)</label>
+                    <textarea id="productDetails" rows="2" placeholder="Size, warranty, etc." class="w-full px-3 py-2 rounded-xl border border-slate-300 outline-none focus:border-brand-500 resize-none text-xs"></textarea>
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeModal()" class="flex-1 py-2.5 rounded-xl border border-slate-300 text-slate-600 font-semibold hover:bg-slate-50">Cancel</button>
+                    <button type="submit" class="flex-1 py-2.5 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 shadow-md">Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        const STORAGE_KEY = 'hardware_inventory_data';
+        let products = [];
+        let currentCategory = 'All';
+        const categories = ['All', 'Plumbing', 'Electrical', 'Paints', 'Tools', 'Fasteners', 'General'];
+
+        // Sample Data for first-time load
+        const sampleData = [
+            { id: '1', name: 'PVC Pipe 1/2 Inch', category: 'Plumbing', brand: 'Supreme', price: 180, rack: 'Pipe Rack P-1', details: '10 Feet length', image: '' },
+            { id: '2', name: 'CPVC Solvent 100ml', category: 'Plumbing', brand: 'Astar', price: 85, rack: 'Shelf 3', details: 'Fast drying', image: '' },
+            { id: '3', name: '9W LED Bulb White', category: 'Electrical', brand: 'Philips', price: 100, rack: 'Rack E-2', details: '1 Year Warranty', image: '' },
+            { id: '4', name: '1-Way Switch 6A', category: 'Electrical', brand: 'Anchor Roma', price: 35, rack: 'Drawer 4', details: 'Modular white', image: '' },
+            { id: '5', name: 'Tractor Emulsion 1L', category: 'Paints', brand: 'Asian Paints', price: 240, rack: 'Paint Sec-A', details: 'Interior wall paint', image: '' }
+        ];
+
+        // --- Initialization ---
+        function init() {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                products = JSON.parse(stored);
+            } else {
+                products = [...sampleData];
+                saveToStorage();
+            }
+            renderCategoryTabs();
+            filterProducts();
+            updateStats();
+        }
+
+        function saveToStorage() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+            updateStats();
+        }
+
+        // --- Category Tabs ---
+        function renderCategoryTabs() {
+            const container = document.getElementById('categoryTabs');
+            container.innerHTML = categories.map(cat => `
+                <button onclick="setCategory('${cat}')" 
+                    class="whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-semibold transition-colors border 
+                    ${currentCategory === cat ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}">
+                    ${cat}
+                </button>
+            `).join('');
+        }
+
+        function setCategory(cat) {
+            currentCategory = cat;
+            renderCategoryTabs();
+            filterProducts();
+        }
+
+        // --- Search and Filter ---
+        function filterProducts() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const clearBtn = document.getElementById('clearSearchBtn');
+            clearBtn.style.display = query.length > 0 ? 'flex' : 'none';
+
+            const filtered = products.filter(p => {
+                const matchesCat = currentCategory === 'All' || p.category === currentCategory;
+                const matchesSearch = p.name.toLowerCase().includes(query) || 
+                                      p.brand.toLowerCase().includes(query) || 
+                                      p.rack.toLowerCase().includes(query);
+                return matchesCat && matchesSearch;
+            });
+
+            renderProductGrid(filtered);
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            filterProducts();
+        }
+
+        // --- Rendering Products ---
+        function getCategoryIcon(cat) {
+            const icons = { 'Plumbing': 'fa-droplet', 'Electrical': 'fa-bolt', 'Paints': 'fa-paint-roller', 'Tools': 'fa-hammer', 'Fasteners': 'fa-screw', 'General': 'fa-box' };
+            return icons[cat] || 'fa-box';
+        }
+
+        function renderProductGrid(list) {
+            const grid = document.getElementById('productGrid');
+            const emptyState = document.getElementById('emptyState');
+
+            if (list.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            grid.innerHTML = list.map(p => `
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col cursor-pointer" onclick="editProduct('${p.id}')">
+                    <div class="h-28 sm:h-32 bg-slate-100 relative flex items-center justify-center border-b border-slate-200 overflow-hidden">
+                        ${p.image ? 
+                            `<img src="${p.image}" class="w-full h-full object-cover">` : 
+                            `<i class="fa-solid ${getCategoryIcon(p.category)} text-3xl text-slate-300"></i>`
+                        }
+                        <div class="absolute top-2 right-2 bg-black/60 backdrop-blur text-white text-[10px] font-bold px-2 py-0.5 rounded">
+                            ${p.category}
+                        </div>
+                    </div>
+                    <div class="p-3 flex-1 flex flex-col justify-between">
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 line-clamp-1">${p.brand || 'No Brand'}</p>
+                            <h4 class="text-sm font-bold text-slate-800 leading-tight mb-2 line-clamp-2">${p.name}</h4>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-1 rounded-md mb-2 w-fit">
+                                <i class="fa-solid fa-location-dot"></i> ${p.rack}
+                            </div>
+                            <div class="text-lg font-black text-emerald-600">₹${parseFloat(p.price).toLocaleString('en-IN')}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // --- Image Handling (Base64) ---
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64 = e.target.result;
+                document.getElementById('productImageBase64').value = base64;
+                document.getElementById('imagePreview').src = base64;
+                document.getElementById('imagePreviewContainer').classList.remove('hidden');
+                document.getElementById('imagePreviewContainer').classList.add('flex');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeImage() {
+            document.getElementById('productImageBase64').value = '';
+            document.getElementById('imagePreview').src = '';
+            document.getElementById('imagePreviewContainer').classList.add('hidden');
+            document.getElementById('imagePreviewContainer').classList.remove('flex');
+            document.getElementById('imageInput').value = '';
+        }
+
+        // --- Form Modal & Actions ---
+        function openModal() {
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = '';
+            removeImage();
+            document.getElementById('modalTitle').innerText = 'Add New Product';
+            document.getElementById('productModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('productModal').classList.add('hidden');
+        }
+
+        function editProduct(id) {
+            const p = products.find(item => item.id === id);
+            if (!p) return;
+
+            document.getElementById('productId').value = p.id;
+            document.getElementById('productName').value = p.name;
+            document.getElementById('productCategory').value = p.category;
+            document.getElementById('productBrand').value = p.brand;
+            document.getElementById('productPrice').value = p.price;
+            document.getElementById('productRack').value = p.rack;
+            document.getElementById('productDetails').value = p.details;
+            
+            if (p.image) {
+                document.getElementById('productImageBase64').value = p.image;
+                document.getElementById('imagePreview').src = p.image;
+                document.getElementById('imagePreviewContainer').classList.remove('hidden');
+                document.getElementById('imagePreviewContainer').classList.add('flex');
+            } else {
+                removeImage();
+            }
+
+            document.getElementById('modalTitle').innerText = 'Edit Product';
+            document.getElementById('productModal').classList.remove('hidden');
+        }
+
+        function saveProduct(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('productId').value || Date.now().toString();
+            const newProduct = {
+                id: id,
+                name: document.getElementById('productName').value.trim(),
+                category: document.getElementById('productCategory').value,
+                brand: document.getElementById('productBrand').value.trim(),
+                price: parseFloat(document.getElementById('productPrice').value),
+                rack: document.getElementById('productRack').value.trim(),
+                details: document.getElementById('productDetails').value.trim(),
+                image: document.getElementById('productImageBase64').value
+            };
+
+            const index = products.findIndex(p => p.id === id);
+            if (index > -1) {
+                products[index] = newProduct;
+            } else {
+                products.push(newProduct);
+            }
+
+            saveToStorage();
+            filterProducts();
+            closeModal();
+        }
+
+        function updateStats() {
+            document.getElementById('statTotal').innerText = products.length;
+            const uniqueRacks = new Set(products.map(p => p.rack)).size;
+            document.getElementById('statRacks').innerText = uniqueRacks;
+        }
+
+        // Initialize App
+        window.onload = init;
+    </script>
+</body>
+</html>
